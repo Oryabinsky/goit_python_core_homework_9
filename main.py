@@ -1,4 +1,6 @@
 """Console bot helper"""
+
+
 def input_error(func):
     def wrapper(*args, **kwargs):
         try:
@@ -42,7 +44,10 @@ def handle_contact_get_phone(contacts, command):
 def handle_contact_get_all(contacts):
     if not contacts:
         return 'No contacts found'
-    result = '\n'.join('{:<32}: {:<15}'.format(name, phone) for name, phone in contacts.items())
+    result = '\n'.join(
+        '{:<32}: {:<15}'.format(name, phone)
+        for name, phone in contacts.items()
+    )
     return result
 
 
