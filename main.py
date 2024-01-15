@@ -1,5 +1,8 @@
 """Console bot helper"""
 
+# phonebook
+contacts = {}
+
 
 def input_error(func):
     def wrapper(*args, **kwargs):
@@ -14,20 +17,31 @@ def input_error(func):
     return wrapper
 
 
-def handle_hello():
+def handle_invalid_command(*_):
+    return 'Invalid command format'
+
+
+def handle_hello(*_):
     return 'How can I help you?'
 
 
-@input_error
-def handle_contact_add(contacts, command):
-    _, name, phone = command
-    contacts[name] = phone
-    return f'Contact {name} added with phone number {phone}'
+def handle_end(*_):
+    return 'Good bye!'
 
 
 @input_error
-def handle_contact_change(contacts, command):
-    _, name, phone = command
+def handle_contact_add(command):
+    name, phone = command
+    if name not in contacts:
+        contacts[name] = phone
+        return f'Contact {name} added with phone number {phone}'
+    else:
+        return f'Contact {name} already exists!'
+
+
+@input_error
+def handle_contact_change(command):
+    name, phone = command
     if contacts.get(name):
         contacts[name] = phone
         return f'Phone number for {name} changed to {phone}'
@@ -36,48 +50,83 @@ def handle_contact_change(contacts, command):
 
 
 @input_error
-def handle_contact_get_phone(contacts, command):
-    name = command[1]
-    return f'Phone number for {name} {contacts.get(name,"not found")}'
+def handle_contact_get_by_name(command):
+    name = command[0]
+    phone = contacts.get(name)
+    if phone:
+        return f'Phone number for {name} is {phone}'
+    else:
+        return f'Contact {name} not found'
 
 
-def handle_contact_get_all(contacts):
+def handle_contact_get_all(*_):
     if not contacts:
         return 'No contacts found'
-    result = '\n'.join(
-        '{:<32}: {:<15}'.format(name, phone)
+
+    result = '{}{:<26}: {:<15}\n'.format(' ' * 3, 'Name', 'Phone number')
+    result += '\n'.join(
+        '{}{:<26}: {:<15}'.format(' ' * 3, name, phone)
         for name, phone in contacts.items()
     )
+
     return result
 
 
+command_handlers = {
+    'hello': handle_hello,
+    'good bye': handle_end,
+    'close': handle_end,
+    'exit': handle_end,
+    'add': handle_contact_add,
+    'change': handle_contact_change,
+    'phone': handle_contact_get_by_name,
+    'show all': handle_contact_get_all
+}
+
+
+def get_handler(command: str) -> tuple:
+    """
+    Parse user input data
+    :param command: user input
+    :return: command handler and list of clean user data
+    """
+    # prepare user input
+    user_command = command.lower().split()
+    user_command_data = command.split()
+
+    # try to get handler with one word command
+    handler = command_handlers.get(user_command[0])
+    # remove command word from user input
+    user_data_list = user_command_data[1:]
+
+    # try to get handler with two words command
+    if not handler and len(user_command) > 1:
+        two_words_command = user_command[0] + ' ' + user_command[1]
+        handler = command_handlers.get(two_words_command)
+        # remove command words from user input
+        user_data_list = user_command_data[2:]
+
+    return (handler, user_data_list) if handler \
+        else (handle_invalid_command, None)
+
+
 def main():
-    contacts = {}
 
     while True:
         user_input = input('Enter command: ')
 
-        # get only user command
-        user_command = user_input.lower()
+        if not user_input:
+            print(handle_invalid_command())
+            continue
 
-        # get only user data without command word
-        user_command_data = user_input.split()
+        handler, user_command_data = get_handler(user_input)
 
-        if user_command in ['good bye', 'close', 'exit'] or '.' in user_input:
-            print('Good bye!')
+        answer = handler(user_command_data)
+
+        print(answer)
+
+        if answer == 'Good bye!':
             break
-        elif user_command == 'hello':
-            print(handle_hello())
-        elif user_command.startswith('add'):
-            print(handle_contact_add(contacts, user_command_data))
-        elif user_command.startswith('change'):
-            print(handle_contact_change(contacts, user_command_data))
-        elif user_command.startswith('phone'):
-            print(handle_contact_get_phone(contacts, user_command_data))
-        elif user_command == 'show all':
-            print(handle_contact_get_all(contacts))
-        else:
-            print('Invalid command. Try again.')
 
 
 if __name__ == '__main__':
